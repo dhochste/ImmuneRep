@@ -98,6 +98,16 @@ def FrequencyCountN(samplenames,dirname='../data/',segment='V',plotflag=0):
 
 	return freqs
 
+def FrequencyCorrelation(freqarray,segnames,plotflag=0):
+	corr=np.corrcoef(freqarray)
+	if plotflag==1:
+		plt.pcolor(corr,cmap='RdBu',vmin=0,vmax=1)
+		plt.xticks(np.arange(float(len(corr)))+.5,samplenames)
+		plt.yticks(np.arange(float(len(corr)))+.5,samplenames,rotation='vertical')
+		plt.show()
+	return corr
+
+
 # this function doesn't work or do anything yet
 def FrequencyCluster(samplenames,dirname='../data/',segment='V'):
 	freqs=FrequencyCountN(samplenames,dirname=dirname,segment=segment)
@@ -107,10 +117,41 @@ def FrequencyCluster(samplenames,dirname='../data/',segment='V'):
 	print model.labels_
 
 
+class FrequencyAnalyzer:
+	def __init__(self,samplenames,dirname='../data/',segment='V'):
+		self.samplenames=samplenames
+		self.dirname=dirname
+		self.segment=segment
+
+	def count(self,plotflag=0):
+		self.freqs=FrequencyCountN(samplenames=self.samplenames,dirname=self.dirname,segment=self.segment,plotflag=plotflag)
+		return self.freqs
+
+	def sort(self):
+		self.segnames=SortNames(self.freqs)
+		return self.segnames
+
+	def asarray(self):
+		if not hasattr(self,'freqs'):
+			self.count()
+		self.freqarray,self.segnames=FrequencyArray(freqs=self.freqs)
+		return self.freqarray
+
+	def corr(self,plotflag=0):
+		if not hasattr(self,'freqarray'):
+			self.asarray()
+		self.corrcoef=FrequencyCorrelation(freqarray=self.freqarray,segnames=self.segnames,plotflag=plotflag)
+		return self.corrcoef
+
+
+
+
+
+
 
 
 
 samplenames=['SRR1298742','SRR1298742']
 # segnames,frequencies=FrequencyCount(samplename)
 # freqs=FrequencyCountN(samplenames,segment='V',plotflag=1)
-FrequencyCluster(samplenames,segment='V')
+# print corr
