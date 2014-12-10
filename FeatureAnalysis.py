@@ -145,13 +145,96 @@ class FrequencyAnalyzer:
 
 
 
+############ Clustering #################
+from Bio.Seq import Seq
+from Bio import motifs
+from Bio.Alphabet import IUPAC
+import difflib
+
+
+samplename='SRR1298742'
+dirname='../data/'
+plotflag=0
+
+filename=dirname+samplename+'.VDJ.H3.L3.CH1.fa'
+reseqname=samplename+r'\.([0-9]*)'
+reV=r'(IGHV[0-9]*-[0-9]+/*[0-9]*-*[0-9]*)'
+reJ=r'(IGHJ[0-9]*)'
+reseqs=r'([A-Z]*)'
+reall=reseqname+r'.*'+reV+r'.*'+reJ+r'\s[0-9]*\s[0-9]*;'+reseqs
+# reall=reseqname+r'.*'+reV+r'.*'+reJ+r'\s[0-9]*\s[0-9]*;'
+# print re.findall(reall,'>SRR1298742.1 IBP32IW01DTCHY length=506;IGHV1-2 292 17;;IGHJ6 46 1;RAKGASDSNYAGGMDVW;;IGHG 27 0;;YTFSGYYMH;GWINPNSGGTNYA;;')
+seqnames,Vs,Js,seqs=zip(*[re.findall(reall,line)[0] for line in open(filename) if line[0]=='>'])
+seqVJ=dict()
+for seqname,V,J,seq in zip(seqnames,Vs,Js,seqs):
+	if (V,J) in seqVJ:
+		seqVJ[(V,J)]['seqnames'].append(seqname)
+		seqVJ[(V,J)]['seqs'].append(seq)
+		seqVJ[(V,J)]['count']+=1
+	else:
+		seqVJ[(V,J)]={'seqnames':[seqname],'seqs':[seq],'count':1}
+
+VJ=seqVJ.keys()
+segnum=[re.findall(r'IGHV([0-9]*)-([0-9]+)/*[0-9]*-*[0-9]*.*IGHJ([0-9]*)',v+j)[0] for v,j in VJ]
+VJ=[j for i,j in sorted(zip(segnum,VJ))]
+counts=[seqVJ[vj]['count'] for vj in VJ]
+
+if plotflag==1:
+	ind=np.arange(len(VJ))
+	plt.bar(ind,counts)
+	plt.xticks(ind+.4,[v+' '+j for v,j in VJ],rotation='vertical')
+	ax=plt.gca()
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(8) 
+	
+
+	plt.figure()
+	plt.hist(counts,50)
+	plt.xlabel('occurences of VJ pair')
+	plt.show()
+
+def PSSM(seqs):
+	n=max([len(seq) for seq in seqs])
+	seqalign=[Seq(seq+'X'*(n-len(seq)),alphabet=IUPAC.ExtendedIUPACProtein) for seq in seqs]
+	M=motifs.create(seqalign)
+	sm=difflib.SequenceMatcher()
+	ratios=[]
+	for seq in seqalign:
+		sm.set_seqs(M.consensus,seq)
+		ratios.append((1.-sm.ratio())*float(len(M.consensus)))
+	print M
+	plt.hist(ratios,20)
+	plt.show()
+
+def CountClones(seqs):
+	n=max([len(seq) for seq in seqs])
+	seqalign=[seq+'X'*(n-len(seq)) for seq in seqs]
+	clones=list(set(seqalign))
+	counts=[]
+	for clone in clones:
+		counts.append(seqalign.count(clone))
+
+	ind=np.arange(len(counts))
+	plt.bar(ind,counts)
+	plt.xticks(ind+.4,clones,rotation='vertical')
+	plt.show()
 
 
 
 
 
 
-samplenames=['SRR1298742','SRR1298742']
+
+# PSSM(seqVJ[('IGHV1-2','IGHJ6')]['seqs'])
+# PSSM(seqVJ[('IGHV1-8','IGHJ5')]['seqs'])
+# PSSM(seqVJ[('IGHV1-69','IGHJ6')]['seqs'])
+# PSSM(seqVJ[('IGHV4-34','IGHJ6')]['seqs'])
+
+CountClones(seqVJ[('IGHV4-34','IGHJ6')]['seqs'])
+
+
+################################################
+# samplenames=['SRR1298742','SRR1298742']
 # segnames,frequencies=FrequencyCount(samplename)
 # freqs=FrequencyCountN(samplenames,segment='V',plotflag=1)
 # print corr
